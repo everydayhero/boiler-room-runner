@@ -80,6 +80,36 @@ describe('createServerApp', () => {
       })
     })
 
+    it('calls createLocals with the query from the passed location', () => {
+      const routes = {
+        path: '/',
+        component: ({ children }) => children,
+        indexRoute: {
+          component: () => React.createElement('div')
+        },
+        childRoutes: [
+          {
+            path: '/foos/:fooId',
+            component: () => React.createElement('div')
+          }
+        ]
+      }
+      const store = createStore((state) => state)
+
+      const createLocalsSpy = sinon.spy((args) => args)
+
+      const app = createServerApp({
+        routes,
+        createLocals: createLocalsSpy
+      })
+
+      app('/foos?foo=bar').then(() => {
+        const arg = createLocalsSpy.getCall(0).args[0]
+        expect(arg.query).to.eql({ foo: 'bar' })
+        expect(arg.store).to.eql(store)
+      })
+    })
+
     it('it takes a basepath option which will prefix all route matching and links', (done) => {
       const routes = {
         path: '/',

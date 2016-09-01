@@ -49,8 +49,9 @@ module.exports = ({
         return onRouteRedirect(redirect)
       }
 
-      const { params, components, router } = props
-      const locals = createLocals({ params, store, router })
+      const { params, components, location } = props
+      const { query } = location
+      const locals = createLocals({ params, store, query })
 
       trigger('fetch', components, locals)
     })

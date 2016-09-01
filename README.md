@@ -83,6 +83,6 @@ A Redux store which will be passed to a `<Provider />`
 
 A path that will be prepended to all route-matching and href generation. If your app is not hosted at `/` you'll need to use this option to tell your app where all paths start from. Default is `/`.
 
-`createLocals({ params, router, store })`
+`createLocals({ params, query, store })`
 
-A function which takes the params object from React Router, along with the store instance, and returns a locals object to be used by Redial.
+A function which takes the params object from React Router, the query from the parsed location, the store instance, and returns a locals object to be used by Redial.

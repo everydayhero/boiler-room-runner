@@ -105,7 +105,7 @@ test('createClientApp() takes an optional createLocals function to prepare redia
 
   const Root = ({ children }) => (
     React.createElement('div', {},
-      React.createElement(Link, { to: '/__testling/foo', id: 'another-foo-link' }, 'Go for it'),
+      React.createElement(Link, { to: '/__testling/foo?bar=baz', id: 'createLocalsLink' }, 'Go for it'),
       children
     )
   )
@@ -134,9 +134,10 @@ test('createClientApp() takes an optional createLocals function to prepare redia
   createLocalsSpy.reset()
 
   mount(App, (elem) => {
-    const link = elem.querySelector('#another-foo-link')
+    const link = elem.querySelector('#createLocalsLink')
     link.click()
-    t.ok(createLocalsSpy.called, 'createLocals called')
+    const arg = createLocalsSpy.getCall(0).args[0]
+    t.equal(arg.query.bar, 'baz')
   })
 })
 
