@@ -1,5 +1,5 @@
 const React = require('react')
-const withScroll = require('scroll-behavior')
+const withScroll = require('scroll-behavior').default
 const { Provider } = require('react-redux')
 const { Router, useRouterHistory, match } = require('react-router')
 const { createHistory } = require('history')
