@@ -23,7 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "react-redux": "^4.4.5",
-    "react-router": "^2.4.1",
+    "react-router": "^3.0.2",
     "redial": "^0.4.1",
     "redux": "^3.5.2",
     "scroll-behavior": "^0.8.1"
