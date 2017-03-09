@@ -5,6 +5,10 @@ const { RouterContext, match } = require('react-router')
 const { renderToString, renderToStaticMarkup } = require('react-dom/server')
 const { trigger } = require('redial')
 
+const serializeLocation = ({ pathname, search, hash }) => (
+  `${pathname}${search}${hash}`
+)
+
 const {
   defaultCreateLocals,
   defaultStore,
@@ -84,7 +88,7 @@ module.exports = ({
         if (error) {
           return reject(error)
         } else if (redirect) {
-          return resolve({ redirect })
+          return resolve({ redirect: serializeLocation(redirect) })
         } else if (!props) {
           return reject(new Error(`Not found: Route ${route} could not be matched`))
         }
