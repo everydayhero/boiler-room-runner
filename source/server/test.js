@@ -219,9 +219,74 @@ describe('createServerApp', () => {
       })
       const app = createServerApp({ routes: routesWithRedirect })
       app('/redir').then(({ redirect }) => {
-        expect(redirect.pathname).to.eq('/blargy')
+        expect(redirect).to.eq('/blargy')
         done()
       }).catch(done)
+    })
+
+    describe('redirecting', () => {
+      it('respects combinations of hashes and searches', () => {
+        const routesWithRedirect = Object.assign({}, routes, {
+          childRoutes: routes.childRoutes.concat([
+            {
+              path: '/redir1',
+              onEnter (_, replace) {
+                return replace('/blargy?foo=bar')
+              }
+            },
+            {
+              path: '/redir2',
+              onEnter (_, replace) {
+                return replace('/blargy#baz')
+              }
+            },
+            {
+              path: '/redir3',
+              onEnter (_, replace) {
+                return replace('/blargy?foo=bar#baz')
+              }
+            }
+          ])
+        })
+        const app = createServerApp({ routes: routesWithRedirect })
+        return Promise.all([
+          app('/redir1'),
+          app('/redir2'),
+          app('/redir3')
+        ]).then(([search, hash, both]) => {
+          expect(search.redirect).to.eq('/blargy?foo=bar')
+          expect(hash.redirect).to.eq('/blargy#baz')
+          expect(both.redirect).to.eq('/blargy?foo=bar#baz')
+        })
+      })
+
+      it('respects basepath', () => {
+        const routesWithRedirect = Object.assign({}, routes, {
+          childRoutes: routes.childRoutes.concat([
+            {
+              path: '/redir',
+              onEnter (_, replace) {
+                return replace('/blargy')
+              }
+            }
+          ])
+        })
+        const app1 = createServerApp({
+          routes: routesWithRedirect,
+          basepath: '/foo'
+        })
+        const app2 = createServerApp({
+          routes: routesWithRedirect,
+          basepath: '/foo/'
+        })
+        return Promise.all([
+          app1('/redir'),
+          app2('/redir')
+        ]).then(([one, two]) => {
+          expect(one.redirect).to.eq('/foo/blargy')
+          expect(two.redirect).to.eq('/foo/blargy')
+        })
+      })
     })
   })
 
