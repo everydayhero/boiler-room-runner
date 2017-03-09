@@ -259,6 +259,34 @@ describe('createServerApp', () => {
           expect(both.redirect).to.eq('/blargy?foo=bar#baz')
         })
       })
+
+      it('respects basepath', () => {
+        const routesWithRedirect = Object.assign({}, routes, {
+          childRoutes: routes.childRoutes.concat([
+            {
+              path: '/redir',
+              onEnter (_, replace) {
+                return replace('/blargy')
+              }
+            }
+          ])
+        })
+        const app1 = createServerApp({
+          routes: routesWithRedirect,
+          basepath: '/foo'
+        })
+        const app2 = createServerApp({
+          routes: routesWithRedirect,
+          basepath: '/foo/'
+        })
+        return Promise.all([
+          app1('/redir'),
+          app2('/redir')
+        ]).then(([one, two]) => {
+          expect(one.redirect).to.eq('/foo/blargy')
+          expect(two.redirect).to.eq('/foo/blargy')
+        })
+      })
     })
   })
 

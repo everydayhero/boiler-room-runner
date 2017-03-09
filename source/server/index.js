@@ -3,10 +3,18 @@ const React = require('react')
 const { Provider } = require('react-redux')
 const { RouterContext, match } = require('react-router')
 const { renderToString, renderToStaticMarkup } = require('react-dom/server')
+const { join } = require('path')
 const { trigger } = require('redial')
 
-const serializeLocation = ({ pathname, search, hash }) => (
-  `${pathname}${search}${hash}`
+const { assign } = Object
+
+const serializeLocation = ({
+  basename = '',
+  pathname = '',
+  search = '',
+  hash = ''
+}) => (
+  `${join(basename, pathname)}${search}${hash}`
 )
 
 const {
@@ -88,7 +96,11 @@ module.exports = ({
         if (error) {
           return reject(error)
         } else if (redirect) {
-          return resolve({ redirect: serializeLocation(redirect) })
+          return resolve({
+            redirect: serializeLocation(
+              assign(redirect, { basename: basepath })
+            )
+          })
         } else if (!props) {
           return reject(new Error(`Not found: Route ${route} could not be matched`))
         }
