@@ -24,9 +24,9 @@
   "dependencies": {
     "react-redux": "^4.4.5",
     "react-router": "^3.0.2",
+    "react-router-scroll": "^0.4.1",
     "redial": "^0.4.1",
-    "redux": "^3.5.2",
-    "scroll-behavior": "^0.8.1"
+    "redux": "^3.5.2"
   },
   "peerDependencies": {
     "react": "^0.14.0 || ^15.0.0",

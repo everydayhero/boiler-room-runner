@@ -1,7 +1,12 @@
 const React = require('react')
-const withScroll = require('scroll-behavior').default
+const useScroll = require('react-router-scroll/lib/useScroll')
 const { Provider } = require('react-redux')
-const { Router, useRouterHistory, match } = require('react-router')
+const {
+  Router,
+  useRouterHistory,
+  applyRouterMiddleware,
+  match
+} = require('react-router')
 const { createHistory } = require('history')
 const { trigger } = require('redial')
 
@@ -56,13 +61,24 @@ module.exports = ({
     })
   })
 
-  const hashIgnoringHistory = withScroll(basedHistory, (_prevLoc, { hash } = {}) => (
-    !hash
-  ))
+  const scrollToHashMiddleware = useScroll((prevRouterProps, { location }) => {
+    if (location.hash) {
+      const e = document.querySelector(location.hash)
+      if (e) {
+        e.scrollIntoView()
+        return false
+      }
+    }
+    return true
+  })
 
   return () => (
     React.createElement(Provider, { store },
-      React.createElement(Router, { history: hashIgnoringHistory, routes })
+      React.createElement(Router, {
+        history: basedHistory,
+        routes,
+        render: applyRouterMiddleware(scrollToHashMiddleware)
+      })
     )
   )
 }
