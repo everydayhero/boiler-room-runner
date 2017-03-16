@@ -61,15 +61,23 @@ module.exports = ({
     })
   })
 
-  const scrollToHashMiddleware = useScroll((prevRouterProps, { location }) => {
-    if (location.hash) {
-      const e = document.querySelector(location.hash)
-      if (e) {
-        e.scrollIntoView()
-        return false
+  const scrollBehaviourMiddleware = useScroll((prevRouterProps, routerProps) => {
+    const scrollToAnchor = (prevRouterProps, { location }) => {
+      if (location.hash) {
+        const e = document.querySelector(location.hash)
+        if (e) {
+          e.scrollIntoView()
+          return false
+        }
       }
+      return true
     }
-    return true
+    const scrollBehaviourRoute = routerProps.routes.find((route) =>
+      route.scrollBehaviour)
+    const customScrollBehaviour = scrollBehaviourRoute
+      ? scrollBehaviourRoute.scrollBehaviour
+      : scrollToAnchor
+    return customScrollBehaviour(prevRouterProps, routerProps)
   })
 
   return () => (
@@ -77,7 +85,7 @@ module.exports = ({
       React.createElement(Router, {
         history: basedHistory,
         routes,
-        render: applyRouterMiddleware(scrollToHashMiddleware)
+        render: applyRouterMiddleware(scrollBehaviourMiddleware)
       })
     )
   )
