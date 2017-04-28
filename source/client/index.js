@@ -26,6 +26,7 @@ module.exports = ({
   routes = ensureRoutes('createClientApp'),
   basepath = '',
   history = createHistory(),
+  shouldUpdateScroll = defaultUpdateScroll,
   createLocals = defaultCreateLocals,
   onRouteError = () => {},
   onRouteRedirect = () => {}
@@ -46,10 +47,9 @@ module.exports = ({
         return onRouteRedirect(redirect)
       } else if (!props) {
         return onRouteError(new Error(`Not found: Route ${location.pathname} failed to match`))
-      } 
+      }
 
-      const { params, components, location } = props
-      const { query } = location
+      const { params, components, location: { query } } = props
       const locals = createLocals({ params, store, query })
 
       trigger('fetch', components, locals)
@@ -57,9 +57,7 @@ module.exports = ({
     })
   })
 
-  const hashIgnoringHistory = withScroll(basedHistory, (_prevLoc, { hash } = {}) => (
-    !hash
-  ))
+  const hashIgnoringHistory = withScroll(basedHistory, shouldUpdateScroll)
 
   return () => (
     React.createElement(Provider, { store },
@@ -67,3 +65,7 @@ module.exports = ({
     )
   )
 }
+
+const defaultUpdateScroll = (_prevLoc, { hash } = {}) => (
+  !hash
+)
