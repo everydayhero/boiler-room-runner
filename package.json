@@ -13,7 +13,7 @@
     "test:client": "browserify ./source/client/test.js -t [ babelify --presets [ es2015 ] ] | testling",
     "test": "npm run test:server && npm run test:client",
     "prepublish": "npm test && npm run build",
-    "preinstall": "npm run prepublish"
+    "preinstall": "npm run build"
   },
   "babel": {
     "presets": [
