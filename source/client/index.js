@@ -86,10 +86,15 @@ module.exports = ({
   const scrollBehaviourMiddleware = useScroll((prevRouterProps, routerProps) => {
     const scrollToAnchor = (prevRouterProps, { location }) => {
       if (location.hash) {
-        const e = document.querySelector(location.hash)
-        if (e) {
-          e.scrollIntoView()
-          return false
+        try {
+          const e = document.querySelector(location.hash)
+
+          if (e) {
+            e.scrollIntoView()
+            return false
+          }
+        } catch (e) {
+          return true
         }
       }
       return true
