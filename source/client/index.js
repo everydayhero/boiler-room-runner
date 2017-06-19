@@ -52,6 +52,7 @@ const onLocationChange = ({
     const locals = createLocals({ params, store, query })
 
     trigger('fetch', components, locals)
+    trigger('defer', components, locals)
   })
 }
 
