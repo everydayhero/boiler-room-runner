@@ -10,6 +10,16 @@ const {
 const { createHistory } = require('history')
 const { trigger } = require('redial')
 
+const find = (array = [], predicate = () => false) => {
+  if (!array.length) return
+
+  const [head, ...tail] = array
+
+  if (predicate(head)) return head
+
+  return find(tail, predicate)
+}
+
 const {
   defaultCreateLocals,
   defaultStore,
@@ -100,8 +110,9 @@ module.exports = ({
       }
       return true
     }
-    const scrollBehaviourRoute = routerProps.routes.find((route) =>
-      route.scrollBehaviour)
+    const scrollBehaviourRoute = find(routerProps.routes, (route) => (
+      route.scrollBehaviour
+    ))
     const customScrollBehaviour = scrollBehaviourRoute
       ? scrollBehaviourRoute.scrollBehaviour
       : scrollToAnchor
