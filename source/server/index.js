@@ -109,7 +109,9 @@ module.exports = ({
         const { query } = location
         const locals = createLocals({ params, query, store: storeInstance })
 
-        trigger('fetch', components, locals).then((res) => {
+        trigger('advance', components, locals).then(() => (
+          trigger('fetch', components, locals)
+        )).then((res) => {
           const content = renderApp({ props, store: storeInstance })
           const state = storeInstance.getState()
           const result = renderDocument({
