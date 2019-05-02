@@ -112,12 +112,12 @@ module.exports = ({
         trigger('fetch', components, locals).then((res) => {
           const content = renderApp({ props, store: storeInstance })
           const state = storeInstance.getState()
-          const result = renderDocument({
+          const body = renderDocument({
             assets,
             content,
             state
           })
-          resolve({ result })
+          resolve({ body })
         }).catch((error) => {
           reject(error)
         })

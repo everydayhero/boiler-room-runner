@@ -24,17 +24,17 @@ describe('createServerApp', () => {
       }
     })
 
-    it('takes an optional renderDocument function which is called to produce the final result', (done) => {
+    it('takes an optional renderDocument function which is called to produce the final body', (done) => {
       const routes = { path: '/', component: () => React.createElement('div', null, '') }
       const app = createServerApp({ routes, renderDocument () { return 'This is my thing' } })
 
-      app('/').then(({ result }) => {
-        expect(result).to.eq('This is my thing')
+      app('/').then(({ body }) => {
+        expect(body).to.eq('This is my thing')
         done()
       }).catch(done)
     })
 
-    it('takes an optional renderApp function which is called to produce the result passed to renderDocument', (done) => {
+    it('takes an optional renderApp function which is called to produce the body passed to renderDocument', (done) => {
       const routes = { path: '/', component: () => React.createElement('div', null, '') }
       const app = createServerApp({
         routes,
@@ -46,8 +46,8 @@ describe('createServerApp', () => {
         }
       })
 
-      app('/').then(({ result }) => {
-        expect(result).to.eq('WOOT! This is my thing')
+      app('/').then(({ body }) => {
+        expect(body).to.eq('WOOT! This is my thing')
         done()
       }).catch(done)
     })
@@ -148,8 +148,8 @@ describe('createServerApp', () => {
         basepath: '/mah-base'
       })
 
-      app('/').then(({ result }) => {
-        expect(result).to.contain('/mah-base')
+      app('/').then(({ body }) => {
+        expect(body).to.contain('/mah-base')
         done()
       }).catch(done)
     })
@@ -184,16 +184,16 @@ describe('createServerApp', () => {
 
     it('resolves to the HTML for the matching route (index)', (done) => {
       const app = createServerApp({ routes })
-      app('/').then(({ result }) => {
-        expect(result).to.contain('YARGY YARG YARG')
+      app('/').then(({ body }) => {
+        expect(body).to.contain('YARGY YARG YARG')
         done()
       }).catch(done)
     })
 
     it('resolves to the HTML for the matching route (blargy)', (done) => {
       const app = createServerApp({ routes })
-      app('/blargy').then(({ result }) => {
-        expect(result).to.contain('BLARGY BLARG BLARG')
+      app('/blargy').then(({ body }) => {
+        expect(body).to.contain('BLARGY BLARG BLARG')
         done()
       }).catch(done)
     })
@@ -291,13 +291,13 @@ describe('createServerApp', () => {
   })
 
   describe('.empty()', () => {
-    it('returns the result of calling renderDocument with the provided assets array', () => {
+    it('returns the body of calling renderDocument with the provided assets array', () => {
       const routes = { path: '/', component: () => React.createElement('div', null, '') }
       const renderDocument = ({ content, assets = [] }) => `NAH ${assets[0]}`
       const assets = ['MATE']
       const app = createServerApp({ routes, assets, renderDocument })
-      const result = app.empty()
-      expect(result).to.eq('NAH MATE')
+      const body = app.empty()
+      expect(body).to.eq('NAH MATE')
     })
   })
 })
