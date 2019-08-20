@@ -3,7 +3,7 @@ const { expect } = require('chai')
 const sinon = require('sinon')
 
 const React = require('react')
-const { Link } = require('react-router')
+const { Link, Redirect } = require('react-router-dom')
 const { createStore } = require('redux')
 
 const createServerApp = require('./')
@@ -25,7 +25,12 @@ describe('createServerApp', () => {
     })
 
     it('takes an optional renderDocument function which is called to produce the final body', (done) => {
-      const routes = { path: '/', component: () => React.createElement('div', null, '') }
+      const routes = [
+        {
+          path: '/',
+          component: () => React.createElement('div', null, '')
+        }
+      ]
       const app = createServerApp({ routes, renderDocument () { return 'This is my thing' } })
 
       app('/').then(({ body }) => {
@@ -35,7 +40,7 @@ describe('createServerApp', () => {
     })
 
     it('takes an optional renderApp function which is called to produce the body passed to renderDocument', (done) => {
-      const routes = { path: '/', component: () => React.createElement('div', null, '') }
+      const routes = [{ path: '/', component: () => React.createElement('div', null, '') }]
       const app = createServerApp({
         routes,
         renderDocument ({ content }) {
@@ -53,19 +58,16 @@ describe('createServerApp', () => {
     })
 
     it('takes an optional createLocals function which is called with the router params and store to produce locals for redial', (done) => {
-      const routes = {
+      const routes = [{
         path: '/',
-        component: ({ children }) => children,
-        indexRoute: {
-          component: () => React.createElement('div')
-        },
-        childRoutes: [
+        component: () => React.createElement('div'),
+        routes: [
           {
             path: '/foos/:fooId',
             component: () => React.createElement('div')
           }
         ]
-      }
+      }]
       const store = createStore((state) => state)
       const createLocalsSpy = sinon.spy(({ params }) => (params))
       const app = createServerApp({
@@ -83,19 +85,16 @@ describe('createServerApp', () => {
     })
 
     it('calls createLocals with the query from the passed location', (done) => {
-      const routes = {
+      const routes = [{
         path: '/',
-        component: ({ children }) => children,
-        indexRoute: {
-          component: () => React.createElement('div')
-        },
-        childRoutes: [
+        component: () => React.createElement('div'),
+        routes: [
           {
             path: '/foos',
             component: () => React.createElement('div')
           }
         ]
-      }
+      }]
       const createLocalsSpy = sinon.spy((args) => args)
 
       const app = createServerApp({
@@ -111,7 +110,7 @@ describe('createServerApp', () => {
     })
 
     it('takes createStore() and initalState options to create a fresh store for each request, unless the store option is provided', (done) => {
-      const routes = { path: '/', component: () => React.createElement('div', null, '') }
+      const routes = [{ path: '/', component: () => React.createElement('div', null, '') }]
       const stores = []
 
       const app = createServerApp({
@@ -138,10 +137,10 @@ describe('createServerApp', () => {
     })
 
     it('it takes a basepath option which will prefix all route matching and links', (done) => {
-      const routes = {
+      const routes = [{
         path: '/',
         component: () => React.createElement(Link, { to: '/' })
-      }
+      }]
 
       const app = createServerApp({
         routes,
@@ -156,7 +155,7 @@ describe('createServerApp', () => {
   })
 
   it('returns a function which takes a route and returns a promise', () => {
-    const routes = { path: '/', component: () => React.createElement('div', null, '') }
+    const routes = [{ path: '/', component: () => React.createElement('div', null, '') }]
     const app = createServerApp({ routes })
     const subject = app('/')
     expect(subject instanceof Promise).to.be.ok
@@ -171,16 +170,15 @@ describe('createServerApp', () => {
       React.createElement('div', null, 'BLARGY BLARG BLARG')
     )
 
-    const routes = {
-      path: '/',
-      component: ({ children }) => children,
-      indexRoute: {
-        component: IndexRouteHandler
+    const routes = [
+      {
+        component: IndexRouteHandler,
+        path: '/',
+        exact: true
       },
-      childRoutes: [
-        { path: '/blargy', component: BlargyRouteHandler }
-      ]
-    }
+      { path: '/blargy', component: BlargyRouteHandler }
+    ]
+
 
     it('resolves to the HTML for the matching route (index)', (done) => {
       const app = createServerApp({ routes })
@@ -207,16 +205,13 @@ describe('createServerApp', () => {
     })
 
     it('resolves with a redirect location when route is redirected', (done) => {
-      const routesWithRedirect = Object.assign({}, routes, {
-        childRoutes: routes.childRoutes.concat([
-          {
-            path: '/redir',
-            onEnter (_, replace) {
-              return replace('/blargy')
-            }
-          }
-        ])
-      })
+      const routesWithRedirect = [
+        ...routes,
+        {
+          path: '/redir',
+          component: () => React.createElement(Redirect, { to: '/blargy' })
+        }
+      ]
       const app = createServerApp({ routes: routesWithRedirect })
       app('/redir').then(({ redirect }) => {
         expect(redirect).to.eq('/blargy')
@@ -226,28 +221,22 @@ describe('createServerApp', () => {
 
     describe('redirecting', () => {
       it('respects combinations of hashes and searches', () => {
-        const routesWithRedirect = Object.assign({}, routes, {
-          childRoutes: routes.childRoutes.concat([
-            {
-              path: '/redir1',
-              onEnter (_, replace) {
-                return replace('/blargy?foo=bar')
-              }
-            },
-            {
-              path: '/redir2',
-              onEnter (_, replace) {
-                return replace('/blargy#baz')
-              }
-            },
-            {
-              path: '/redir3',
-              onEnter (_, replace) {
-                return replace('/blargy?foo=bar#baz')
-              }
-            }
-          ])
-        })
+        const routesWithRedirect = [
+          ...routes,
+          {
+            path: '/redir1',
+            component: () => React.createElement(Redirect, { to: '/blargy?foo=bar' })
+          },
+          {
+            path: '/redir2',
+            component: () => React.createElement(Redirect, { to: '/blargy#baz' })
+          },
+          {
+            path: '/redir3',
+            component: () => React.createElement(Redirect, { to: '/blargy?foo=bar#baz' })
+          }
+        ]
+
         const app = createServerApp({ routes: routesWithRedirect })
         return Promise.all([
           app('/redir1'),
@@ -261,30 +250,21 @@ describe('createServerApp', () => {
       })
 
       it('respects basepath', () => {
-        const routesWithRedirect = Object.assign({}, routes, {
-          childRoutes: routes.childRoutes.concat([
-            {
-              path: '/redir',
-              onEnter (_, replace) {
-                return replace('/blargy')
-              }
-            }
-          ])
-        })
+        const routesWithRedirect = [
+          ...routes,
+          {
+            path: '/redir',
+            component: () => React.createElement(Redirect, { to: '/blargy' })
+          }
+        ]
         const app1 = createServerApp({
           routes: routesWithRedirect,
           basepath: '/foo'
         })
-        const app2 = createServerApp({
-          routes: routesWithRedirect,
-          basepath: '/foo/'
-        })
         return Promise.all([
           app1('/redir'),
-          app2('/redir')
-        ]).then(([one, two]) => {
+        ]).then(([one]) => {
           expect(one.redirect).to.eq('/foo/blargy')
-          expect(two.redirect).to.eq('/foo/blargy')
         })
       })
     })
@@ -293,7 +273,7 @@ describe('createServerApp', () => {
   describe('.empty()', () => {
     it('returns the body of calling renderDocument with the provided assets array', () => {
       const routes = { path: '/', component: () => React.createElement('div', null, '') }
-      const renderDocument = ({ content, assets = [] }) => `NAH ${assets[0]}`
+      const renderDocument = ({ assets = [] }) => `NAH ${assets[0]}`
       const assets = ['MATE']
       const app = createServerApp({ routes, assets, renderDocument })
       const body = app.empty()

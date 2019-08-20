@@ -1,21 +1,12 @@
 const Document = require('./Document')
 const React = require('react')
 const { Provider } = require('react-redux')
-const { RouterContext, match } = require('react-router')
+const { StaticRouter } = require('react-router')
+const queryString = require('query-string')
+const { matchRoutes, renderRoutes } = require('react-router-config')
+
 const { renderToString, renderToStaticMarkup } = require('react-dom/server')
-const { join } = require('path')
 const { trigger } = require('redial')
-
-const { assign } = Object
-
-const serializeLocation = ({
-  basename = '',
-  pathname = '',
-  search = '',
-  hash = ''
-}) => (
-  `${join(basename, pathname)}${search}${hash}`
-)
 
 const {
   defaultCreateLocals,
@@ -23,12 +14,13 @@ const {
   ensureRoutes
 } = require('../shared')
 
-const defaultRenderApp = ({ store, props }) => (
+const defaultRenderApp = ({ routes, store, context, location, basename }) => (
   renderToString(
     React.createElement(
       Provider, { store },
       React.createElement(
-        RouterContext, props
+        StaticRouter, { location, context, basename },
+        renderRoutes(routes)
       )
     )
   )
@@ -87,41 +79,43 @@ module.exports = ({
   const app = (route) => (
     new Promise((resolve, reject) => {
       const storeInstance = store || createStore(initialState)
+      const branch = matchRoutes(routes, route)
 
-      match({ routes, location: route, basename: basepath }, (
-        error,
-        redirect,
-        props
-      ) => {
-        if (error) {
-          return reject(error)
-        } else if (redirect) {
+      if (!branch || branch.length === 0) {
+        return reject(new Error(`Not found: Route ${route} could not be matched`))
+      }
+
+      const components = branch.map(b => b.route.component)
+      const params = Object.assign(...branch.map(b => b.match.params))
+
+      const search = route.split('?')[1]
+      const query = queryString.parse(search)
+      const locals = createLocals({ params, query, store: storeInstance })
+
+      trigger('fetch', components, locals).then(() => {
+        let context = {}
+        let content = renderApp({
+          routes,
+          store: storeInstance,
+          context,
+          location: route,
+          basename: basepath
+        })
+        // Static router sets context.url if the rendered component is a Redirect
+        if (context.url) {
           return resolve({
-            redirect: serializeLocation(
-              assign(redirect, { basename: basepath })
-            )
+            redirect: context.url
           })
-        } else if (!props) {
-          return reject(new Error(`Not found: Route ${route} could not be matched`))
         }
 
-        const { components, params, location } = props
-        const { query } = location
-        const locals = createLocals({ params, query, store: storeInstance })
-
-        trigger('fetch', components, locals).then((res) => {
-          const content = renderApp({ props, store: storeInstance })
-          const state = storeInstance.getState()
-          const body = renderDocument({
-            assets,
-            content,
-            state
-          })
-          resolve({ body })
-        }).catch((error) => {
-          reject(error)
+        const state = storeInstance.getState()
+        const body = renderDocument({
+          assets,
+          content,
+          state
         })
-      })
+        resolve({ body })
+      }).catch(reject)
     })
   )
 
