@@ -2,11 +2,11 @@ const React = require('react')
 const useScroll = require('react-router-scroll/lib/useScroll')
 const { Provider } = require('react-redux')
 const {
-  Router,
   useRouterHistory,
   applyRouterMiddleware,
   match
 } = require('react-router')
+const { BrowserRouter, matchPath } = require('react-router-dom')
 const { createHistory } = require('history')
 const { trigger } = require('redial')
 
@@ -121,11 +121,11 @@ module.exports = ({
 
   return () => (
     React.createElement(Provider, { store },
-      React.createElement(Router, {
-        history: basedHistory,
-        routes,
-        render: applyRouterMiddleware(scrollBehaviourMiddleware)
-      })
+      React.createElement(BrowserRouter, {
+          render: applyRouterMiddleware(scrollBehaviourMiddleware)
+        },
+        renderRoutes(routes)
+      )
     )
   )
 }
