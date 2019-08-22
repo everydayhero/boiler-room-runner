@@ -1,245 +1,255 @@
-require('es6-shim')
-const { polyfill } = require('es6-promise')
-typeof Promise === 'undefined' && polyfill()
-
+const { describe, it } = require('mocha')
+const { expect } = require('chai')
 const React = require('react')
 const { provideHooks } = require('redial')
-const test = require('tape')
 const sinon = require('sinon')
-const { render } = require('react-dom')
-const { Link } = require('react-router')
+const { MemoryRouter, Router } = require('react-router')
+const { Link } = require('react-router-dom')
+const { renderRoutes } = require('react-router-config')
 const { createStore } = require('redux')
-
-const mount = (App, test) => {
-  const elem = document.createElement('div')
-  document.body.appendChild(elem)
-  render(React.createElement(App), elem)
-  test(elem)
-  document.body.removeChild(elem)
-}
+const { mount } = require('enzyme')
+const { createMemoryHistory } = require('history')
 
 const createClientApp = require('./')
 
-test('createClientApp() throws an exception when routes are undefined', (t) => {
-  t.plan(1)
-
-  try {
-    createClientApp({ routes: undefined })
-  } catch (e) {
-    t.equal(e.message, 'No routes key was found on options passed to createClientApp')
-  }
-})
-
-test('createClientApp() returns a react element', (t) => {
-  t.plan(1)
-
-  const routes = {
-    path: '/__testling',
-    component: () => React.createElement('div')
-  }
-  const App = createClientApp({ routes })
-
-  t.ok(React.isValidElement(React.createElement(App)), 'is a valid element')
-})
-
-test('createClientApp() calls redial functions on initial load', (t) => {
-  t.plan(1)
-
-  const hooks = {
-    fetch: sinon.spy(() => Promise.resolve())
-  }
-  const App = provideHooks(hooks)(
-    () => React.createElement('div')
-  )
-
-  const routes = {
-    path: '/__testling',
-    component: App
-  }
-
-  createClientApp({ routes })
-  t.ok(hooks.fetch.called, 'fetch called')
-})
-
-test('createClientApp() calls redial functions on history change', (t) => {
-  t.plan(1)
-
-  const Root = ({ children }) => (
-    React.createElement('div', {},
-      React.createElement(Link, { to: '/__testling/foo', id: 'foo-link' }, 'Go for it'),
-      children
-    )
-  )
-
-  const hooks = {
-    fetch: sinon.spy(() => Promise.resolve())
-  }
-  const Foo = provideHooks(hooks)(
-    () => React.createElement('div')
-  )
-
-  const routes = {
-    path: '/__testling',
-    component: Root,
-    indexRoute: {
-      component: () => React.createElement('div')
-    },
-    childRoutes: [
-      {
-        path: 'foo',
-        component: Foo
-      }
-    ]
-  }
-
-  const App = createClientApp({ routes })
-
-  mount(App, (elem) => {
-    const link = elem.querySelector('#foo-link')
-    link.click()
-    t.ok(hooks.fetch.called, 'fetch called')
-    global.history.replaceState({}, '', '/__testling')
-  })
-})
-
-test('createClientApp() calls redial functions with { state, dispatch, query, params }', (t) => {
-  t.plan(2)
-
-  const hooks = {
-    fetch: sinon.spy(() => Promise.resolve())
-  }
-  const App = provideHooks(hooks)(
-    () => React.createElement('div')
-  )
-
-  const routes = {
-    path: '/__testling',
-    component: App
-  }
-  const store = createStore(() => ({ foo: 'Foo' }))
-
-  createClientApp({ routes, store })
-
-  const arg = hooks.fetch.getCall(0).args[0]
-  t.is(store.dispatch, arg.dispatch)
-  t.is('Foo', arg.state.foo)
-})
-
-test('createClientApp() takes an optional createLocals function to prepare redial locals', (t) => {
-  t.plan(1)
-
-  const Root = ({ children }) => (
-    React.createElement('div', {},
-      React.createElement(Link, { to: '/__testling/foo?bar=baz', id: 'createLocalsLink' }, 'Go for it'),
-      children
-    )
-  )
-
-  const createLocalsSpy = sinon.spy(() => ({}))
-
-  const routes = {
-    path: '/__testling',
-    component: Root,
-    indexRoute: {
-      component: () => React.createElement('div')
-    },
-    childRoutes: [
-      {
-        path: 'foo',
-        component: () => React.createElement('div')
-      }
-    ]
-  }
-
-  const App = createClientApp({
-    routes,
-    createLocals: createLocalsSpy
+describe('createClientApp', () => {
+  it('throws an exception when routes are undefined', () => {
+    try {
+      createClientApp({ routes: undefined })
+    } catch (e) {
+      expect(e.message).to.equal('No routes key was found on options passed to createClientApp')
+    }
   })
 
-  createLocalsSpy.reset()
+  it('returns a react element', () => {
+    const routes =[{
+      path: '/',
+      component: () => React.createElement('div')
+    }]
 
-  mount(App, (elem) => {
-    const link = elem.querySelector('#createLocalsLink')
-    link.click()
+    const App = createClientApp({ routes })
+
+    expect(React.isValidElement(React.createElement(App))).to.equal(true)
+  })
+
+  it('calls redial functions on initial load', () => {
+    const hooks = {
+      fetch: sinon.spy(() => Promise.resolve())
+    }
+    const App = provideHooks(hooks)(
+      () => React.createElement('div', null, 'Hello')
+    )
+
+    const routes = [{
+      path: '/',
+      component: App
+    }]
+
+    const Root = createClientApp({
+      routes,
+      Router: MemoryRouter,
+      routerProps: {
+        initialEntries: ['/']
+      }
+    })
+    mount(React.createElement(Root))
+
+    expect(hooks.fetch.called).to.equal(true)
+  })
+
+  it('calls redial functions on location change', () => {
+    const Root = ({ route }) => {
+      return (
+        React.createElement('div', {},
+          React.createElement(Link, { to: '/foo', id: 'foo-link' }, 'Go for it'),
+          renderRoutes(route.routes)
+        )
+      )
+    }
+
+    const hooks = {
+      fetch: sinon.spy(() => Promise.resolve())
+    }
+    const Foo = provideHooks(hooks)(
+      () => React.createElement('div', {}, 'Foo!')
+    )
+
+    const routes = [
+      {
+        path: '/',
+        component: Root,
+        routes: [
+          {
+            path: '/foo',
+            component: Foo
+          }
+        ]
+      }
+    ]
+
+    const App = createClientApp({
+      routes,
+      Router: MemoryRouter,
+      routerProps: {
+        initialEntries: ['/']
+      }
+    })
+    const wrapper = mount(React.createElement(App))
+
+    wrapper.find('a#foo-link').simulate('click')
+    wrapper.update()
+
+    expect(hooks.fetch.called).to.equal(true)
+  })
+
+  it('calls redial functions with { state, dispatch, query, params }', () => {
+    const hooks = {
+      fetch: sinon.spy(() => Promise.resolve())
+    }
+    const App = provideHooks(hooks)(
+      () => React.createElement('div')
+    )
+
+    const routes = [{
+      path: '/',
+      component: App
+    }]
+    const store = createStore(() => ({ foo: 'Foo' }))
+    const Root = createClientApp({
+      routes,
+      store,
+      Router: MemoryRouter,
+      routerProps: {
+        initialEntries: ['/']
+      }
+    })
+    mount(React.createElement(Root))
+
+    const arg = hooks.fetch.getCall(0).args[0]
+    expect(arg.dispatch).to.equal(store.dispatch)
+    expect(arg.state.foo).to.equal('Foo')
+  })
+
+  it('takes an optional createLocals function to prepare redial locals', () => {
+    const Root = ({ route }) => (
+      React.createElement('div', {},
+        React.createElement(Link, { to: '/foo?bar=baz', id: 'createLocalsLink' }, 'Go for it'),
+        renderRoutes(route.routes)
+      )
+    )
+
+    const createLocalsSpy = sinon.spy(() => ({}))
+
+    const routes = [
+      {
+        path: '/',
+        component: Root,
+      },
+      {
+        path: '/foo',
+        component: () => React.createElement('div', null, 'Hi, Foo!')
+      }
+    ]
+
+    const App = createClientApp({
+      routes,
+      createLocals: createLocalsSpy,
+      Router: MemoryRouter,
+      routerProps: {
+        initialEntries: ['/']
+      }
+    })
+
+    const wrapper = mount(React.createElement(App))
+    const link = wrapper.find('a#createLocalsLink')
+    link.simulate('click')
+    wrapper.update()
     const arg = createLocalsSpy.getCall(0).args[0]
-    t.equal(arg.query.bar, 'baz')
+    expect(arg.query.bar).to.equal('baz')
   })
-})
 
-test('createClientApp() take an optional basepath param to prefix all matching and links', (t) => {
-  t.plan(1)
-
-  const Root = ({ children }) => (
-    React.createElement('div', {},
-      React.createElement(Link, { to: '/foo', id: 'has-base-foo-link' }, 'Go for it'),
-      children
+  it('should take an optional basepath param to prefix all matching', () => {
+    const Root = ({ children }) => (
+      React.createElement('div', {},
+        React.createElement(Link, { to: '/basepath/foo', id: 'has-base-foo-link' }, 'Go for it'),
+        children
+      )
     )
-  )
 
-  const routes = {
-    path: '/',
-    component: Root,
-    indexRoute: {
-      component: () => React.createElement('div')
-    },
-    childRoutes: [
+    const routes = [
       {
-        path: 'foo',
+        path: '/',
+        component: Root
+      },
+      {
+        path: '/foo',
         component: () => React.createElement('div')
       }
     ]
-  }
 
-  const App = createClientApp({
-    routes,
-    basepath: '/__testling'
+    const App = createClientApp({
+      routes,
+      basepath: '/basepath',
+      Router: MemoryRouter,
+      routerProps: {
+        initialEntries: ['/']
+      }
+    })
+
+    const wrapper = mount(React.createElement(App))
+    const link = wrapper.find('a#has-base-foo-link')
+
+    expect(link.prop('href')).to.equal('/basepath/foo')
   })
 
-  mount(App, (elem) => {
-    const link = elem.querySelector('#has-base-foo-link')
-    t.equal(link.getAttribute('href'), '/__testling/foo')
-  })
-})
-
-test('default setup allows navigation', (t) => {
-  t.plan(2)
-
-  const Root = ({ children }) => (
-    React.createElement('div', {},
-      React.createElement(Link, {
-        to: '/__testling/', id: 'navigation-home-link'
-      }, 'Home'),
-      React.createElement(Link, {
-        to: '/__testling/foo', id: 'navigation-foo-link'
-      }, 'Foo'),
-      children
+  it.only('allows navigation', () => {
+    const Root = ({ route }) => (
+      React.createElement('div', {},
+        React.createElement(Link, {
+          to: '/', id: 'navigation-home-link'
+        }, 'Home'),
+        React.createElement(Link, {
+          to: '/foo', id: 'navigation-foo-link'
+        }, 'Foo'),
+        renderRoutes(route.routes)
+      )
     )
-  )
 
-  const routes = {
-    path: '/__testling',
-    component: Root,
-    indexRoute: {
-      component: () => React.createElement('div', 'Home!')
-    },
-    childRoutes: [
+    const routes = [
       {
-        path: 'foo',
-        component: () => React.createElement('div', 'Foo!')
+        path: '/',
+        component: Root,
+        routes: [
+          {
+            path: '/foo',
+            component: () => React.createElement('div', 'Foo!')
+          }
+        ]
       }
     ]
-  }
 
-  const App = createClientApp({
-    routes
-  })
+    const history = createMemoryHistory()
+    history.push('/')
+    const historySpy = sinon.spy(history, 'push')
+    console.log('Location:', history.location)
+    const App = createClientApp({
+      routes,
+      Router: Router,
+      routerProps: {
+        history
+      }
+    })
+    const wrapper = mount(React.createElement(App))
 
-  mount(App, (elem) => {
-    const homeLink = elem.querySelector('#navigation-home-link')
-    const fooLink = elem.querySelector('#navigation-foo-link')
-    fooLink.click()
-    t.equal(global.location.pathname, '/__testling/foo')
-    homeLink.click()
-    t.equal(global.location.pathname, '/__testling/')
+    const homeLink = wrapper.find('a#navigation-home-link')
+    const fooLink = wrapper.find('a#navigation-foo-link')
+
+    fooLink.simulate('click')
+    wrapper.update()
+    expect(historySpy.firstCall.args[0]).to.equal('/foo')
+
+    homeLink.simulate('click')
+    wrapper.update()
+    expect(historySpy.secondCall.args[0]).to.equal('/')
   })
 })
