@@ -1,24 +1,11 @@
 const React = require('react')
-const useScroll = require('react-router-scroll/lib/useScroll')
 const { Provider } = require('react-redux')
-const {
-  useRouterHistory,
-  applyRouterMiddleware,
-  match
-} = require('react-router')
-const { BrowserRouter, matchPath } = require('react-router-dom')
-const { createHistory } = require('history')
+const { BrowserRouter } = require('react-router-dom')
+const queryString = require('query-string')
+import { renderRoutes, matchRoutes } from 'react-router-config'
+import { withRouter } from 'react-router'
+
 const { trigger } = require('redial')
-
-const find = (array = [], predicate = () => false) => {
-  if (!array.length) return
-
-  const [head, ...tail] = array
-
-  if (predicate(head)) return head
-
-  return find(tail, predicate)
-}
 
 const {
   defaultCreateLocals,
@@ -39,92 +26,67 @@ const {
 const onLocationChange = ({
   store,
   routes,
-  basepath,
   createLocals,
-  onRouteError,
-  onRouteRedirect
+  onRouteError
 }) => (location) => {
-  match({ routes, location, basename: basepath }, (
-    error,
-    redirect,
-    props
-  ) => {
-    if (error) {
-      return onRouteError(error)
-    } else if (redirect) {
-      return onRouteRedirect(redirect)
-    } else if (!props) {
-      return onRouteError(new Error(`Not found: Route ${location.pathname} failed to match`))
-    }
+  const branch = matchRoutes(routes, location.pathname)
 
-    const { params, components, location } = props
-    const { query } = location
-    const locals = createLocals({ params, store, query })
+  if (!branch || branch.length === 0) {
+    return onRouteError(new Error(`Not found: Route ${location.pathname} failed to match`))
+  }
 
-    trigger('fetch', components, locals)
-    trigger('defer', components, locals)
-  })
+  const components = branch.map(b => b.route.component)
+  const params = Object.assign(...branch.map(b => b.match.params))
+
+  const query = queryString.parse(location.search)
+  const locals = createLocals({ params, query, store })
+
+  trigger('fetch', components, locals)
+  trigger('defer', components, locals)
 }
+
+class _HookFetcher extends React.Component {
+  componentDidMount () {
+    const { store, createLocals, onRouteError, location, routes } = this.props
+
+    onLocationChange({ store, routes, createLocals, onRouteError })(location)
+  }
+
+  componentDidUpdate (prevProps) {
+    const { store, createLocals, onRouteError, location, routes } = this.props
+
+    if (prevProps.location !== location) {
+      onLocationChange({ store, routes, createLocals, onRouteError })(location)
+    }
+  }
+
+  render () {
+    return React.createElement('div', {}, this.props.children)
+  }
+}
+const HookFetcher = withRouter(_HookFetcher)
 
 module.exports = ({
   store = defaultStore(),
   routes = ensureRoutes('createClientApp'),
   basepath = '',
-  history = createHistory(),
   createLocals = defaultCreateLocals,
   onRouteError = () => {},
-  onRouteRedirect = () => {}
+  Router = BrowserRouter,
+  routerProps = {}
 }) => {
-  const basedHistory = useRouterHistory(() => history)({
-    basename: basepath
-  })
-
-  const locationChangeHandler = onLocationChange({
-    store,
-    routes,
-    createLocals,
-    onRouteError,
-    onRouteRedirect
-  })
-
-  basedHistory.listen(locationChangeHandler)
-
-  if (basedHistory.getCurrentLocation) {
-    const initialLocation = basedHistory.getCurrentLocation()
-    locationChangeHandler(initialLocation)
-  }
-
-  const scrollBehaviourMiddleware = useScroll((prevRouterProps, routerProps) => {
-    const scrollToAnchor = (prevRouterProps, { location }) => {
-      if (location.hash) {
-        try {
-          const e = document.querySelector(location.hash)
-
-          if (e) {
-            e.scrollIntoView()
-            return false
-          }
-        } catch (e) {
-          return true
-        }
-      }
-      return true
-    }
-    const scrollBehaviourRoute = find(routerProps.routes, (route) => (
-      route.scrollBehaviour
-    ))
-    const customScrollBehaviour = scrollBehaviourRoute
-      ? scrollBehaviourRoute.scrollBehaviour
-      : scrollToAnchor
-    return customScrollBehaviour(prevRouterProps, routerProps)
-  })
-
   return () => (
     React.createElement(Provider, { store },
-      React.createElement(BrowserRouter, {
-          render: applyRouterMiddleware(scrollBehaviourMiddleware)
-        },
-        renderRoutes(routes)
+      React.createElement(Router, { basename: basepath, ...routerProps },
+        React.createElement(HookFetcher, {
+            store,
+            routes,
+            basepath,
+            createLocals,
+            onRouteError
+          },
+          renderRoutes(routes)
+        )
       )
     )
   )
