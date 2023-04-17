@@ -54,7 +54,7 @@
     "es6-promise": "^3.2.1",
     "es6-shim": "^0.35.3",
     "history": "^3.2.0",
-    "mocha": "^2.4.5",
+    "mocha": "^10.2.0",
     "phantomjs-prebuilt": "^2.1.7",
     "react": "^16.5.2",
     "react-dom": "^16.5.2",
